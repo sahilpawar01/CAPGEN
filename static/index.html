@@ -9,22 +9,38 @@
 <body>
   <main class="card">
     <h1>Image → caption</h1>
-    <p class="lede">Upload a photo. The server runs <strong>Salesforce BLIP</strong> and returns a short description.</p>
+    <p class="lede">Select one or more photos. The server runs <strong>Salesforce BLIP</strong> for each image. Save results as CSV (opens in Excel) or as an Excel workbook.</p>
 
     <form id="form" class="form">
       <label class="file-label">
-        <input type="file" id="file" name="file" accept="image/*" required />
-        <span>Choose image</span>
+        <input type="file" id="file" name="file" accept="image/*" multiple />
+        <span>Choose images</span>
       </label>
-      <button type="submit" id="submit" disabled>Get caption</button>
+      <button type="submit" id="submit" disabled>Get captions</button>
     </form>
 
-    <div id="preview" class="preview" hidden>
-      <img id="previewImg" alt="Preview" />
+    <div id="preview" class="preview-grid" hidden aria-label="Thumbnails"></div>
+
+    <div class="save-row" id="saveRow" hidden>
+      <span class="save-label">Export</span>
+      <button type="button" id="saveCsv" class="btn-secondary" disabled>Save CSV</button>
+      <button type="button" id="saveXlsx" class="btn-secondary" disabled>Save Excel</button>
     </div>
 
     <p id="status" class="status" role="status" aria-live="polite"></p>
-    <p id="result" class="result" hidden></p>
+
+    <div id="tableWrap" class="table-wrap" hidden>
+      <table class="results" id="resultsTable">
+        <thead>
+          <tr>
+            <th scope="col">File</th>
+            <th scope="col">Caption</th>
+            <th scope="col">Error</th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+    </div>
   </main>
   <script src="/static/app.js"></script>
 </body>
