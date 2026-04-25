@@ -8,8 +8,26 @@ const saveCsvBtn = document.getElementById("saveCsv");
 const saveXlsxBtn = document.getElementById("saveXlsx");
 const tableWrap = document.getElementById("tableWrap");
 const resultsBody = document.getElementById("resultsBody");
+const camToggle = document.getElementById("camToggle");
+const camPanel = document.getElementById("camPanel");
+const camVideo = document.getElementById("camVideo");
+const camCanvas = document.getElementById("camCanvas");
+const camLiveText = document.getElementById("camLiveText");
+const camSubStatus = document.getElementById("camSubStatus");
+const camMeta = document.getElementById("camMeta");
+const camSaveServer = document.getElementById("camSaveServer");
 
 const API = "";
+
+const CAPTURE_MS = 2500;
+const JPEG_Q = 0.88;
+const camCtx = camCanvas.getContext("2d");
+
+/** @type {MediaStream | null} */
+let camStream = null;
+/** @type {ReturnType<typeof setInterval> | null} */
+let camTimer = null;
+let camBusy = false;
 
 /** @type {{ filename: string, caption: string, error: string }[]} */
 let lastRows = [];
@@ -187,4 +205,121 @@ saveXlsxBtn.addEventListener("click", async () => {
     statusEl.className = "status error";
     statusEl.textContent = e instanceof Error ? e.message : "Excel save failed";
   }
+});
+
+function stopCamera() {
+  if (camTimer) {
+    clearInterval(camTimer);
+    camTimer = null;
+  }
+  if (camStream) {
+    for (const t of camStream.getTracks()) t.stop();
+    camStream = null;
+  }
+  camVideo.srcObject = null;
+  camPanel.hidden = true;
+  camMeta.hidden = true;
+  camToggle.textContent = "Open camera";
+  camBusy = false;
+  camLiveText.textContent = "—";
+  camSubStatus.textContent = "";
+}
+
+async function sendFrameToBlip() {
+  if (camBusy || !camStream) return;
+  const w = camVideo.videoWidth;
+  const h = camVideo.videoHeight;
+  if (!w || !h) return;
+  camCanvas.width = w;
+  camCanvas.height = h;
+  camCtx.drawImage(camVideo, 0, 0, w, h);
+  const blob = await new Promise((resolve) =>
+    camCanvas.toBlob((b) => resolve(b), "image/jpeg", JPEG_Q)
+  );
+  if (!blob) {
+    camSubStatus.textContent = "Could not capture frame.";
+    return;
+  }
+  camBusy = true;
+  camSubStatus.className = "cam-sub";
+  camSubStatus.textContent = "Asking BLIP…";
+  const body = new FormData();
+  body.append("file", blob, "webcam-frame.jpg");
+  if (camSaveServer.checked) {
+    body.append("save", "true");
+  }
+  try {
+    const res = await fetch(`${API}/api/caption`, { method: "POST", body });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const msg = data.detail || data.message || res.statusText || "Request failed";
+      const detail = typeof msg === "string" ? msg : JSON.stringify(msg);
+      throw new Error(detail);
+    }
+    camLiveText.textContent = data.caption || "(no caption)";
+    if (data.save_error) {
+      camSubStatus.className = "cam-sub cam-sub-error";
+      camSubStatus.textContent = data.save_error;
+    } else if (camSaveServer.checked && data.saved) {
+      camSubStatus.className = "cam-sub";
+      camSubStatus.textContent = `Saved: ${data.saved.image || ""}`;
+    } else {
+      camSubStatus.className = "cam-sub";
+      camSubStatus.textContent = "";
+    }
+  } catch (e) {
+    camSubStatus.className = "cam-sub cam-sub-error";
+    camSubStatus.textContent = e instanceof Error ? e.message : "Caption failed";
+  } finally {
+    camBusy = false;
+  }
+}
+
+async function startCamera() {
+  camSubStatus.className = "cam-sub";
+  camSubStatus.textContent = "";
+  if (!navigator.mediaDevices?.getUserMedia) {
+    camSubStatus.className = "cam-sub cam-sub-error";
+    camSubStatus.textContent = "Camera not available (use HTTPS or localhost, or a modern browser).";
+    return;
+  }
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+      audio: false,
+    });
+  } catch (e) {
+    camSubStatus.className = "cam-sub cam-sub-error";
+    camSubStatus.textContent =
+      e instanceof Error ? e.message : "Could not open camera (check permission).";
+    return;
+  }
+  camVideo.srcObject = camStream;
+  try {
+    await camVideo.play();
+  } catch (_) {
+    /* play() may need gesture on some devices */
+  }
+  camPanel.hidden = false;
+  camMeta.hidden = false;
+  camToggle.textContent = "Stop camera";
+  camLiveText.textContent = "Warming up…";
+  setTimeout(() => {
+    void sendFrameToBlip();
+  }, 300);
+  camTimer = setInterval(() => {
+    void sendFrameToBlip();
+  }, CAPTURE_MS);
+}
+
+camToggle.addEventListener("click", () => {
+  if (camStream) {
+    stopCamera();
+  } else {
+    void startCamera();
+  }
+});
+
+window.addEventListener("beforeunload", () => {
+  stopCamera();
 });

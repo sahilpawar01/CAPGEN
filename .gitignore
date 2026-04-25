@@ -11,6 +11,9 @@ venv/
 .mypy_cache/
 .ruff_cache/
 
+# Webcam + caption dumps (local only)
+webcam_captures/
+
 # OS / editor
 Thumbs.db
 .DS_Store

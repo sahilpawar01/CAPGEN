@@ -224,3 +224,127 @@ button[type="submit"]:disabled {
   color: var(--error);
 }
 
+.h2 {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.h2-tight {
+  margin-top: 0.5rem;
+}
+
+.cam-block {
+  margin-bottom: 0.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lede code {
+  font-size: 0.88em;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.cam-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0 0 0.6rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.cam-check input {
+  margin-top: 0.2rem;
+  accent-color: #2d7a4d;
+  cursor: pointer;
+}
+
+.cam-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-cam {
+  padding: 0.5rem 1.1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+  background: #2d7a4d;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, filter 0.15s;
+}
+
+.btn-cam:hover {
+  background: #256b43;
+  filter: brightness(1.05);
+}
+
+.cam-meta {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.cam-meta kbd {
+  font-size: 0.75em;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.cam-panel {
+  margin-top: 0.9rem;
+}
+
+.cam-video-wrap {
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+  max-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cam-video {
+  display: block;
+  max-width: 100%;
+  max-height: 280px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.cam-live {
+  margin: 0.75rem 0 0;
+  font-size: 1rem;
+  line-height: 1.5;
+  padding: 0.85rem 1rem;
+  background: rgba(45, 122, 77, 0.15);
+  border-left: 3px solid #2d7a4d;
+  border-radius: 0 8px 8px 0;
+}
+
+.cam-sub {
+  min-height: 1.2em;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0.4rem 0 0;
+}
+
+.cam-sub-error {
+  color: var(--error);
+}
+

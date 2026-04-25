@@ -9,8 +9,29 @@
 <body>
   <main class="card">
     <h1>Image → caption</h1>
-    <p class="lede">Select one or more photos. The server runs <strong>Salesforce BLIP</strong> for each image. Save results as CSV (opens in Excel) or as an Excel workbook.</p>
+    <p class="lede">Select one or more photos. The server runs <strong>Salesforce BLIP</strong> for each image. Save results as CSV (opens in Excel) or as an Excel workbook. The camera can optionally save one JPEG per frame under <code>webcam_captures/</code> (the caption is drawn on the image).</p>
 
+    <section class="cam-block" aria-label="Webcam live caption">
+      <h2 class="h2">Live from camera</h2>
+      <label class="cam-check">
+        <input type="checkbox" id="camSaveServer" checked />
+        <span>Save each frame and caption on the server</span>
+      </label>
+      <div class="cam-row">
+        <button type="button" id="camToggle" class="btn-cam">Open camera</button>
+        <span class="cam-meta" id="camMeta" hidden>Every ~2.5s · <kbd>BLIP</kbd> caption</span>
+      </div>
+      <div id="camPanel" class="cam-panel" hidden>
+        <div class="cam-video-wrap">
+          <video id="camVideo" class="cam-video" playsinline muted autoplay></video>
+        </div>
+        <canvas id="camCanvas" width="1" height="1" hidden aria-hidden="true"></canvas>
+        <p class="cam-live" id="camLiveText" role="status" aria-live="polite">Starting…</p>
+        <p class="cam-sub" id="camSubStatus"></p>
+      </div>
+    </section>
+
+    <h2 class="h2 h2-tight">Upload images</h2>
     <form id="form" class="form">
       <label class="file-label">
         <input type="file" id="file" name="file" accept="image/*" multiple />
