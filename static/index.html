@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>BLIP image caption</title>
+  <title>CAPGEN image caption — Version 4</title>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
   <main class="card">
-    <h1>Image → caption</h1>
-    <p class="lede">Select one or more photos. The server runs <strong>Salesforce BLIP</strong> for each image. Save results as CSV (opens in Excel) or as an Excel workbook. The camera can optionally save one JPEG per frame under <code>webcam_captures/</code> (the caption is drawn on the image).</p>
+    <h1>Image → caption <span class="app-version">Version 4</span></h1>
+    <p class="lede">Select one or more photos. The server runs <strong>CAPGEN</strong> for each image. Save results as CSV (opens in Excel) or as an Excel workbook. The camera can optionally save one JPEG per frame under <code>webcam_captures/</code> (the caption is drawn on the image).</p>
 
     <section class="cam-block" aria-label="Webcam live caption">
       <h2 class="h2">Live from camera</h2>
@@ -19,14 +19,28 @@
       </label>
       <div class="cam-row">
         <button type="button" id="camToggle" class="btn-cam">Open camera</button>
-        <span class="cam-meta" id="camMeta" hidden>Every ~2.5s · <kbd>BLIP</kbd> caption</span>
+        <span class="cam-meta" id="camMeta" hidden>Every ~2.5s · <kbd>CAPGEN</kbd> caption</span>
       </div>
       <div id="camPanel" class="cam-panel" hidden>
         <div class="cam-video-wrap">
           <video id="camVideo" class="cam-video" playsinline muted autoplay></video>
         </div>
         <canvas id="camCanvas" width="1" height="1" hidden aria-hidden="true"></canvas>
-        <p class="cam-live" id="camLiveText" role="status" aria-live="polite">Starting…</p>
+        <div class="cam-live-wrap">
+          <p class="cam-live" id="camLiveText" role="status" aria-live="polite">Starting…</p>
+          <button
+            type="button"
+            id="camSpeak"
+            class="btn-cam-speak"
+            disabled
+            title="Read the current caption aloud (browser TTS). Click again to stop."
+            aria-label="Read caption aloud"
+          >
+            <svg class="btn-cam-speak-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+              <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c3.95-.9 7-4.22 7-8.77 0-4.55-3.05-7.86-7-8.77z" />
+            </svg>
+          </button>
+        </div>
         <p class="cam-sub" id="camSubStatus"></p>
       </div>
     </section>
@@ -38,6 +52,7 @@
         <span>Choose images</span>
       </label>
       <button type="submit" id="submit" disabled>Get captions</button>
+      <button type="button" id="analyzeBtn" class="btn-analyze" disabled title="After captions, opens a full analysis page (vocabulary, sentiment, quality checks)">Analyze</button>
     </form>
 
     <div id="preview" class="preview-grid" hidden aria-label="Thumbnails"></div>
@@ -49,6 +64,7 @@
     </div>
 
     <p id="status" class="status" role="status" aria-live="polite"></p>
+    <p id="captionTimer" class="status-timer" hidden role="status" aria-live="polite"></p>
 
     <div id="tableWrap" class="table-wrap" hidden>
       <table class="results" id="resultsTable">
@@ -63,6 +79,7 @@
       </table>
     </div>
   </main>
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=10"></script>
+  <!-- v4: multi-ref enroll, activity log on change, improved YOLO–person linking for phone/laptop -->
 </body>
 </html>

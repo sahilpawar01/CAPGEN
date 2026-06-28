@@ -14,6 +14,9 @@ venv/
 # Webcam + caption dumps (local only)
 webcam_captures/
 
+# Activity tracker enrollments + logs
+activity_tracker/sessions/
+
 # OS / editor
 Thumbs.db
 .DS_Store

@@ -3,6 +3,7 @@ const fileInput = document.getElementById("file");
 const submitBtn = document.getElementById("submit");
 const preview = document.getElementById("preview");
 const statusEl = document.getElementById("status");
+const captionTimerEl = document.getElementById("captionTimer");
 const saveRow = document.getElementById("saveRow");
 const saveCsvBtn = document.getElementById("saveCsv");
 const saveXlsxBtn = document.getElementById("saveXlsx");
@@ -13,11 +14,17 @@ const camPanel = document.getElementById("camPanel");
 const camVideo = document.getElementById("camVideo");
 const camCanvas = document.getElementById("camCanvas");
 const camLiveText = document.getElementById("camLiveText");
+const camSpeak = document.getElementById("camSpeak");
 const camSubStatus = document.getElementById("camSubStatus");
 const camMeta = document.getElementById("camMeta");
 const camSaveServer = document.getElementById("camSaveServer");
+const analyzeBtn = document.getElementById("analyzeBtn");
 
 const API = "";
+const ANALYZE_SESSION_KEY = "capgen_caption_batch";
+
+/** Rough server-side time per image for batch captions (~2.5s each). */
+const CAPGEN_EST_SEC_PER_IMAGE = 2.5;
 
 const CAPTURE_MS = 2500;
 const JPEG_Q = 0.88;
@@ -32,10 +39,66 @@ let camBusy = false;
 /** @type {{ filename: string, caption: string, error: string }[]} */
 let lastRows = [];
 
+/** @type {ReturnType<typeof setInterval> | null} */
+let captionCountdownInterval = null;
+
+function hasAnalyzableCaptions() {
+  return lastRows.some((r) => String(r.caption || "").trim() && !String(r.error || "").trim());
+}
+
+function setAnalyzeButtonState() {
+  if (analyzeBtn) analyzeBtn.disabled = !hasAnalyzableCaptions();
+}
+
 function setSaveEnabled(on) {
   saveCsvBtn.disabled = !on;
   saveXlsxBtn.disabled = !on;
   saveRow.hidden = !on;
+}
+
+function formatRemainingTime(sec) {
+  const s = Math.max(0, sec);
+  if (s >= 60) {
+    const m = Math.floor(s / 60);
+    const r = Math.floor(s % 60);
+    return `${m}:${String(r).padStart(2, "0")}`;
+  }
+  if (s >= 10) return `${Math.floor(s)} s`;
+  return `${s.toFixed(1)} s`;
+}
+
+function stopCaptionCountdown() {
+  if (captionCountdownInterval !== null) {
+    clearInterval(captionCountdownInterval);
+    captionCountdownInterval = null;
+  }
+  if (captionTimerEl) {
+    captionTimerEl.hidden = true;
+    captionTimerEl.textContent = "";
+  }
+}
+
+function startCaptionCountdown(nImages) {
+  stopCaptionCountdown();
+  if (!captionTimerEl) return;
+  const totalSec = nImages * CAPGEN_EST_SEC_PER_IMAGE;
+  const end = performance.now() + totalSec * 1000;
+  captionTimerEl.hidden = false;
+  captionTimerEl.className = "status-timer status-timer--active";
+  const tick = () => {
+    const left = Math.max(0, (end - performance.now()) / 1000);
+    if (left <= 0) {
+      captionTimerEl.textContent = "Almost done (past estimate)…";
+      if (captionCountdownInterval !== null) {
+        clearInterval(captionCountdownInterval);
+        captionCountdownInterval = null;
+      }
+      return;
+    }
+    captionTimerEl.textContent = `Est. time left: ${formatRemainingTime(left)}`;
+  };
+  tick();
+  captionCountdownInterval = setInterval(tick, 100);
 }
 
 function renderTable(rows) {
@@ -119,6 +182,8 @@ fileInput.addEventListener("change", () => {
   submitBtn.disabled = !files || files.length === 0;
   lastRows = [];
   setSaveEnabled(false);
+  setAnalyzeButtonState();
+  stopCaptionCountdown();
   tableWrap.hidden = true;
   resultsBody.replaceChildren();
   preview.replaceChildren();
@@ -141,10 +206,11 @@ form.addEventListener("submit", async (e) => {
   if (!files || files.length === 0) return;
 
   statusEl.className = "status loading";
-  statusEl.textContent = `Running BLIP on ${files.length} image(s)…`;
+  statusEl.textContent = `Running CAPGEN on ${files.length} image(s)…`;
   setSaveEnabled(false);
   tableWrap.hidden = true;
   submitBtn.disabled = true;
+  startCaptionCountdown(files.length);
 
   const body = new FormData();
   for (const f of files) {
@@ -175,14 +241,38 @@ form.addEventListener("submit", async (e) => {
         : "";
     renderTable(lastRows);
     setSaveEnabled(lastRows.length > 0);
+    setAnalyzeButtonState();
   } catch (err) {
     statusEl.className = "status error";
     statusEl.textContent = err instanceof Error ? err.message : "Something went wrong";
     lastRows = [];
     setSaveEnabled(false);
+    setAnalyzeButtonState();
   } finally {
+    stopCaptionCountdown();
     submitBtn.disabled = !fileInput.files?.length;
   }
+});
+
+analyzeBtn?.addEventListener("click", () => {
+  if (!hasAnalyzableCaptions()) return;
+  try {
+    sessionStorage.setItem(
+      ANALYZE_SESSION_KEY,
+      JSON.stringify(
+        lastRows.map((r) => ({
+          filename: r.filename,
+          caption: r.caption,
+          error: r.error || "",
+        }))
+      )
+    );
+  } catch {
+    statusEl.className = "status error";
+    statusEl.textContent = "Could not store results (session storage blocked or full).";
+    return;
+  }
+  window.location.assign("/analyze");
 });
 
 saveCsvBtn.addEventListener("click", () => {
@@ -207,7 +297,67 @@ saveXlsxBtn.addEventListener("click", async () => {
   }
 });
 
+function stopCameraSpeech() {
+  if (window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
+  if (camSpeak) {
+    camSpeak.classList.remove("btn-cam-speak--active");
+  }
+}
+
+function getCamSpeakableText() {
+  const t = (camLiveText.textContent || "").trim();
+  if (!t) return null;
+  if (t === "—" || t === "-") return null;
+  if (/^starting/i.test(t) || /^warming up/i.test(t)) return null;
+  return t;
+}
+
+function updateCamSpeakButton() {
+  if (!camSpeak) return;
+  if (!window.speechSynthesis) {
+    camSpeak.disabled = true;
+    camSpeak.title = "Text-to-speech is not available in this browser.";
+    return;
+  }
+  const t = getCamSpeakableText();
+  const hasText = Boolean(t);
+  camSpeak.disabled = !hasText;
+  camSpeak.title = hasText
+    ? "Read the current caption aloud. Click again to stop."
+    : "Caption will appear here; then you can have it read aloud.";
+}
+
+function speakCamCaption() {
+  if (!window.speechSynthesis) {
+    return;
+  }
+  if (window.speechSynthesis.speaking) {
+    window.speechSynthesis.cancel();
+    camSpeak.classList.remove("btn-cam-speak--active");
+    return;
+  }
+  const text = getCamSpeakableText();
+  if (!text) return;
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "en-GB";
+  u.rate = 0.95;
+  u.onstart = () => {
+    if (camSpeak) camSpeak.classList.add("btn-cam-speak--active");
+  };
+  u.onend = () => {
+    if (camSpeak) camSpeak.classList.remove("btn-cam-speak--active");
+  };
+  u.onerror = () => {
+    if (camSpeak) camSpeak.classList.remove("btn-cam-speak--active");
+  };
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(u);
+}
+
 function stopCamera() {
+  stopCameraSpeech();
   if (camTimer) {
     clearInterval(camTimer);
     camTimer = null;
@@ -223,9 +373,13 @@ function stopCamera() {
   camBusy = false;
   camLiveText.textContent = "—";
   camSubStatus.textContent = "";
+  if (camSpeak) {
+    camSpeak.disabled = true;
+    camSpeak.classList.remove("btn-cam-speak--active");
+  }
 }
 
-async function sendFrameToBlip() {
+async function sendFrameToCapgen() {
   if (camBusy || !camStream) return;
   const w = camVideo.videoWidth;
   const h = camVideo.videoHeight;
@@ -242,7 +396,7 @@ async function sendFrameToBlip() {
   }
   camBusy = true;
   camSubStatus.className = "cam-sub";
-  camSubStatus.textContent = "Asking BLIP…";
+  camSubStatus.textContent = "Asking CAPGEN…";
   const body = new FormData();
   body.append("file", blob, "webcam-frame.jpg");
   if (camSaveServer.checked) {
@@ -256,6 +410,7 @@ async function sendFrameToBlip() {
       const detail = typeof msg === "string" ? msg : JSON.stringify(msg);
       throw new Error(detail);
     }
+    stopCameraSpeech();
     camLiveText.textContent = data.caption || "(no caption)";
     if (data.save_error) {
       camSubStatus.className = "cam-sub cam-sub-error";
@@ -272,6 +427,7 @@ async function sendFrameToBlip() {
     camSubStatus.textContent = e instanceof Error ? e.message : "Caption failed";
   } finally {
     camBusy = false;
+    updateCamSpeakButton();
   }
 }
 
@@ -304,11 +460,12 @@ async function startCamera() {
   camMeta.hidden = false;
   camToggle.textContent = "Stop camera";
   camLiveText.textContent = "Warming up…";
+  updateCamSpeakButton();
   setTimeout(() => {
-    void sendFrameToBlip();
+    void sendFrameToCapgen();
   }, 300);
   camTimer = setInterval(() => {
-    void sendFrameToBlip();
+    void sendFrameToCapgen();
   }, CAPTURE_MS);
 }
 
@@ -318,6 +475,10 @@ camToggle.addEventListener("click", () => {
   } else {
     void startCamera();
   }
+});
+
+camSpeak?.addEventListener("click", () => {
+  speakCamCaption();
 });
 
 window.addEventListener("beforeunload", () => {

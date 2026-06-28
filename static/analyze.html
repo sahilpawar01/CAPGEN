@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Caption dataset analysis — CAPGEN</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body class="body-analyze">
+  <div class="analyze-shell">
+    <nav class="analyze-nav">
+      <a class="analyze-back" href="/">← Back to caption</a>
+    </nav>
+    <header class="analyze-hero">
+      <h1 class="analyze-title">Caption dataset analysis</h1>
+      <p class="analyze-sub">
+        Vocabulary, length, sentiment, and quality heuristics for teams curating data, students studying datasets, and shipping caption-based products.
+        Text-only sentiment (VADER) is a writing-tone prior, not image-grounded labels.
+      </p>
+    </header>
+
+    <p id="analyzeError" class="analyze-error" role="status" hidden></p>
+    <p id="analyzeLoading" class="analyze-loading" role="status">Loading…</p>
+
+    <div id="analyzeMain" class="analyze-main" hidden>
+      <p class="analyze-context" id="analyzeContextLine"></p>
+
+      <ul class="insight-list" id="insightList" aria-label="Key insights"></ul>
+
+      <div class="metric-grid" id="metricGrid" aria-label="Summary metrics"></div>
+
+      <section class="analyze-section" aria-label="Vocabulary and length">
+        <h2 class="analyze-h2">Distributions &amp; phrasing</h2>
+        <p class="analyze-p">Content words, bigrams, length bins — for vocabulary balance, n-gram priors, and outlier curation.</p>
+        <div class="analyze-charts analyze-charts-4" id="chartRow1">
+          <div class="chart-box">
+            <h3 class="chart-h">Top content words</h3>
+            <p class="chart-hint">Stopwords removed; types repeated across the batch are counted.</p>
+            <div class="chart-canvas chart-canvas--sm"><canvas id="chTopWords"></canvas></div>
+          </div>
+          <div class="chart-box">
+            <h3 class="chart-h">Top bigrams (pairs)</h3>
+            <p class="chart-hint">Recurring two-word patterns — useful for phrase overlap and data leakage checks.</p>
+            <div class="chart-canvas chart-canvas--sm"><canvas id="chBigrams"></canvas></div>
+          </div>
+        </div>
+        <div class="analyze-charts analyze-charts-4" id="chartRow2">
+          <div class="chart-box">
+            <h3 class="chart-h">Words per caption (bins)</h3>
+            <p class="chart-hint">How spread lengths are; tail in 10+ may need truncation rules for your model.</p>
+            <div class="chart-canvas chart-canvas--sm"><canvas id="chWordBins"></canvas></div>
+          </div>
+            <div class="chart-box">
+            <h3 class="chart-h">VADER label counts</h3>
+            <p class="chart-hint">Dominant class per line (pos / neu / neg). Averages: see table below.</p>
+            <div class="chart-canvas chart-canvas--sm"><canvas id="chSent"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="analyze-split" id="outlierDupWrap" hidden>
+        <section class="outlier-panel" id="outlierPanel" hidden aria-label="Length outliers">
+          <h2 class="analyze-h2">Length outliers (QA)</h2>
+          <div class="outlier-cards" id="outlierCards"></div>
+        </section>
+        <section class="dup-panel" id="dupPanel" hidden aria-label="Duplicate captions">
+          <h2 class="analyze-h2">Exact duplicate lines</h2>
+          <p class="analyze-p" id="dupSummary"></p>
+          <ul class="dup-list" id="dupList"></ul>
+        </section>
+      </div>
+
+      <section class="analyze-section" aria-label="Per caption detail">
+        <h2 class="analyze-h2">Per-caption scores</h2>
+        <div class="table-wrap table-wrap--analyze">
+          <table class="results results-wide">
+            <thead>
+              <tr>
+                <th scope="col">File</th>
+                <th scope="col">Caption</th>
+                <th scope="col">Words</th>
+                <th scope="col">VADER</th>
+                <th scope="col">Label</th>
+              </tr>
+            </thead>
+            <tbody id="analyzeDetailBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="analyze-actions">
+        <button type="button" class="btn-secondary" id="btnExportJson">Download analysis JSON</button>
+        <a class="btn-secondary explore-link" href="/">Add more images</a>
+      </div>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+  <script src="/static/analyze.js?v=1"></script>
+</body>
+</html>

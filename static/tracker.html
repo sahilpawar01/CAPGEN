@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Activity tracker — CAPGEN v4</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="card card-tracker">
+    <nav class="tracker-nav" aria-label="Site">
+      <a class="tracker-back" href="/">← Image caption</a>
+      <span class="app-version">Version 4</span>
+    </nav>
+    <h1 class="tracker-h1">Activity tracker</h1>
+    <p class="lede">YOLOv8 + FaceNet (MTCNN). Enroll with a name and reference photos, then run the activity camera.</p>
+
+    <section class="trk-block" aria-label="Activity tracker">
+      <h2 class="h2">Enroll &amp; track</h2>
+      <p class="trk-note">Add a <strong>name</strong> and <strong>one or more</strong> reference photos. Use <strong>front and side (or ¾)</strong> so matching works when you turn away. Lines go to <code>activity_log.txt</code> <strong>only when the activity or match state changes</strong>.</p>
+      <div class="trk-enroll">
+        <label class="trk-name-label">Name <input type="text" id="trkName" placeholder="e.g. Rohan" maxlength="64" /></label>
+        <label class="file-label trk-file">
+          <input type="file" id="trkRef" accept="image/*" multiple />
+          <span>Reference face photos — select <strong>multiple</strong> (Ctrl+click in the file dialog) for front + side profile</span>
+        </label>
+        <button type="button" id="trkEnroll" class="btn-trk" disabled>Enroll</button>
+      </div>
+      <p class="trk-sid" id="trkSessionInfo" hidden><strong>Session:</strong> <code id="trkSessionId">—</code></p>
+      <label class="cam-check trk-check">
+        <input type="checkbox" id="trkSave" checked />
+        <span>On activity <strong>change</strong> only: save a JPEG (caption on image) in addition to the log line</span>
+      </label>
+      <div class="trk-cam-row">
+        <button type="button" id="trkToggle" class="btn-trk" disabled>Start activity camera</button>
+        <span class="cam-meta" id="trkMeta" hidden>~3.3s | YOLO + Face match</span>
+      </div>
+      <div id="trkPanel" class="cam-panel" hidden>
+        <div class="cam-video-wrap">
+          <video id="trkVideo" class="cam-video" playsinline muted autoplay></video>
+        </div>
+        <canvas id="trkCanvas" width="1" height="1" hidden aria-hidden="true"></canvas>
+        <p class="trk-live" id="trkLine" role="status" aria-live="polite">—</p>
+        <p class="cam-sub" id="trkSubStatus"></p>
+        <p class="trk-dets" id="trkDets" hidden></p>
+      </div>
+    </section>
+  </main>
+  <script src="/static/tracker.js?v=4"></script>
+</body>
+</html>
